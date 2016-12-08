@@ -12,14 +12,14 @@ PyOpenGL -> optional
 
 #### Installation
 ============
-Run 
+Run
 ```python setup.py install```
 
 #### License
 =======
-Runar Tenfjord originally relased this package under the GPL Version 2 license, 
-so I suppose that means it has to stay that way. 
+Runar Tenfjord originally relased this package under the GPL Version 2 license,
+so I suppose that means it has to stay that way.
 
 Originally by: Runar Tenfjord, runten@netcom.no
 Minor updates to work with NumPy by Alex Wiltschko
-
+Contribution by: Daniel Kharlamov
