@@ -1,5 +1,14 @@
+# @Author: Daniel Kharlamov <damov>
+# @Date:   2016-10-27T20:13:51+01:00
+# @Email:  d.kharlamov@soton.ac.uk
+# @Last modified by:   damov
+# @Last modified time: 2016-12-08T01:26:05+00:00
+# @License: GPL 3.0
+
+
+
 import math
-from _Bas import bspkntins, bspdegelev, bspbezdecom, bspeval # Lowlevel Nurbs functions
+from _Bas import bspkntins, bspdegelev, bspbezdecom, bspeval, bspdeboor # Lowlevel Nurbs functions
 from Util import  scale, translate, rotz
 
 dependencies = '''This module requires:
@@ -16,7 +25,7 @@ NURBSError = 'NURBSError'
 
 class Crv:
     '''Construct a NURB curve and check the format.
-    
+
  The NURB curve is represented by a 4 dimensional b-spline.
 
  INPUT:
@@ -25,7 +34,7 @@ class Crv:
             [dim,nu] matrix
             dim is the dimension valid options are:
             2 .... (x,y)        2D cartesian coordinates
-            3 .... (x,y,z)      3D cartesian coordinates   
+            3 .... (x,y,z)      3D cartesian coordinates
             4 .... (wx,wy,wz,w) 4D homogeneous coordinates
 
     uknots - Knot sequence along the parametric u direction.
@@ -70,7 +79,7 @@ class Crv:
         "Reverse evaluation direction"
         self.cntrl = self.cntrl[:,::-1]
         self.uknots = 1 - self.uknots[::-1]
-        
+
     def kntins(self, uknots):
         """Insert new knots into the curve
 	NOTE: No knot multiplicity will be increased beyond the order of the spline"""
@@ -102,10 +111,16 @@ class Crv:
         cntrl = np.sort(self.cntrl[0:3,:]/ww)
         return np.asarray([cntrl[0,0], cntrl[1,0], cntrl[2,0],
                                 cntrl[0,-1], cntrl[1,-1], cntrl[2,-1]], np.float)
-                                
+
     def pnt3D(self, ut):
         "Evaluate parametric point[s] and return 3D cartesian coordinate[s]"
         val = self.pnt4D(ut)
+        return val[0:3,:]/np.resize(val[-1,:], (3, val.shape[1]))
+
+    def pnt3D_deboor(self, ut):
+        "Evaluate parametric point[s] and return 3D cartesian coordinate[s]"
+        "using De Boor algorithm                                           "
+        val = self.pnt4D_deboor(ut)
         return val[0:3,:]/np.resize(val[-1,:], (3, val.shape[1]))
 
     def pnt4D(self, ut):
@@ -114,7 +129,17 @@ class Crv:
         if np.less(ut, 0.) or np.greater(ut, 1.):
             raise NURBSError, 'NURBS curve parameter out of range [0,1]'
         return bspeval(self.degree, self.cntrl, self.uknots, ut)
-                
+
+    def pnt4D_deboor(self, ut):
+        "Evaluate parametric point[s] and return 4D homogeneous coordinates"
+        "using De Bloor algorithm for B-Splines                            "
+        ut = np.asarray(ut, np.float)
+        #if np.less(ut, 0.) or np.greater(ut, 1.):
+        if True in [ui<0. or ui>1.0 for ui in ut]:
+            raise NURBSError, 'NURBS curve parameter out of range [0,1]'#
+        return bspdeboor(self.degree, self.cntrl, self.uknots, ut)
+
+
     def plot(self, n = 25):
         """A simple plotting function for debugging purpose
 	n = number of subdivisions.
@@ -146,7 +171,7 @@ class Crv:
         if minz == maxz:
             minz -= 1.
             maxz += 1.
-            
+
         dislin.metafl('cons')
         dislin.disini()
         dislin.hwfont()
@@ -180,7 +205,7 @@ class Line(Crv):
 	Example: c = Line([0,0],[1,1])"""
     def __init__(self, p1 = (0,0,0), p2 = (1,0,0)):
         Crv.__init__(self, np.transpose([p1,p2]), [0,0,1,1])
-                       
+
 class Polyline(Crv):
     """A polyline
 	Example: c = Polyline([[0,0],[5,2],[10,8]])"""
@@ -223,7 +248,7 @@ class Circle(UnitCircle):
 class Arc(Crv):
     """NURBS representation of a arc in the xy plan
 	with given radius (default = 1.) and optional center,
-	start angle (default = 0) and end angle. (default = 2*pi)""" 
+	start angle (default = 0) and end angle. (default = 2*pi)"""
     def __init__(self, radius = 1.,center = None, sang = 0., eang = 2*math.pi):
         sweep = eang - sang # sweep angle of arc
         if sweep < 0.:
@@ -242,7 +267,7 @@ class Arc(Crv):
             knots = [0., 0., 0., 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1., 1., 1.]
 
         dsweep = sweep/(2.*narcs);     # arc segment sweep angle/2
-        
+
         # determine middle control point and weight
         wm = math.cos(dsweep)
         x  = radius*math.cos(dsweep)
@@ -264,14 +289,15 @@ class Arc(Crv):
         Crv.__init__(self, coefs, knots)
 
 if __name__ == '__main__':
+    import time
     #c = Polyline([[0,0],[5,2],[10,8]])
     #c = Crv([[0,30,60,90],[0,0,30,30]],[0,0,0,0,1,1,1,1])
     #c = Line([0,0],[1,1])
-    c = UnitCircle()
+    #c = UnitCircle()
     #c = Arc(1.,None,0,math.pi/2.)
 
-    '''cntrl = [[-50., -75., 25., 0., -25., 75., 50.],
-             [25., 50., 50., 0., -50., -50., 25.]]
+    cntrl = [[-50., -75., 25., 0., -25.,  75., 50.],
+             [25. ,  50., 50., 0., -50., -50., 25.]]
     knots = [0., 0., 0., .2, .4, .6, .8, 1., 1., 1.]
-    c = Crv(cntrl, knots)'''
-    c.plot()
+    c = Crv(cntrl, knots)
+    #c.plot()

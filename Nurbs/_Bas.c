@@ -1,3 +1,10 @@
+/**
+* @Date:   2016-12-08T20:59:59+00:00
+* @Last modified time: 2016-12-08T21:05:21+00:00
+*/
+
+
+
 #include "Python.h"
 #include "numpy/arrayobject.h"
 #include <math.h>
@@ -8,7 +15,7 @@ static double max(double a, double b)
   {
     return b;
   }
-  else 
+  else
   {
     return a;
   }
@@ -20,7 +27,7 @@ static double min(double a, double b)
   {
     return a;
   }
-  else 
+  else
   {
     return b;
   }
@@ -31,7 +38,11 @@ static char _Bas_module__doc__[] = "_Bas module. Version 0.1\n\
 This module implements low level NURBS functions.\n\
 \n";
 
-static double **vec2mat(double *vec, int nrows, int ncols) 
+////////////////////////////////////////////////////////////////////////////////
+//                         Basic matrix methods                               //
+////////////////////////////////////////////////////////////////////////////////
+
+static double **vec2mat(double *vec, int nrows, int ncols)
 {
   int row;
   double **mat;
@@ -39,11 +50,12 @@ static double **vec2mat(double *vec, int nrows, int ncols)
   mat = (double**) malloc (nrows*sizeof(double*));
   mat[0] = vec;
   for (row = 1; row < nrows; row++)
-    mat[row] = mat[row-1] + ncols;  
+    mat[row] = mat[row-1] + ncols;
   return mat;
 }
 
-static double **matrix(int nrows, int ncols) 
+// Allocate an empty 2D matrix
+static double **matrix(int nrows, int ncols)
 {
   int row;
   double **mat;
@@ -51,15 +63,46 @@ static double **matrix(int nrows, int ncols)
   mat = (double**) malloc (nrows*sizeof(double*));
   mat[0] = (double*) malloc (nrows*ncols*sizeof(double));
   for (row = 1; row < nrows; row++)
-    mat[row] = mat[row-1] + ncols;  
+    mat[row] = mat[row-1] + ncols;
   return mat;
 }
 
+// Deep copy of a matrix
+static double **cpymat(double **mat, int nrows, int ncols)
+{
+    int r,c;
+    double **cmat; //.......................................Initalize new matrix
+    cmat = matrix(nrows, ncols); //.........................Allocate matrix
+
+    for(r=0;r<nrows;r++){
+        for(c=0;c<ncols;c++){
+            cmat[r][c] = mat[r][c];
+        }
+    }
+    return cmat;
+}
+
+// Printing 2D array (for debug)
+static void print_array(double **mat, int nrows, int ncols){
+    int r,c;
+    for(r=0;r<nrows;r++){
+        for(c=0;c<ncols;c++){
+            printf("%f ", mat[r][c]);
+        }
+        printf("\n");
+    }
+}
+
+// Destroy a 2D matrix
 static void freematrix(double **mat)
 {
   free(mat[0]);
   free(mat);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Several methods                                                            //
+////////////////////////////////////////////////////////////////////////////////
 
 // Compute logarithm of the gamma function
 // Algorithm from 'Numerical Recipes in C, 2nd Edition' pg214.
@@ -85,7 +128,7 @@ static double _factln(int n)
 {
   static int ntop = 0;
   static double a[101];
-  
+
   if (n <= 1) return 0.0;
   while (n > ntop)
   {
@@ -94,6 +137,9 @@ static double _factln(int n)
   }
   return a[n];
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 static char bincoeff__doc__[] =
 "Computes the binomial coefficient.\n\
@@ -119,13 +165,16 @@ static PyObject * _Bas_bincoeff(PyObject *self, PyObject *args)
 	return Py_BuildValue("d",ret);
 }
 
-// Find the knot span of the parametric point u. 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Find the knot span of the parametric point u.
 //
 // INPUT:
 //
 //   n - number of control points - 1
-//   p - spline degree       
-//   u - parametric point    
+//   p - spline degree
+//   u - parametric point
 //   U - knot sequence
 //
 // RETURN:
@@ -136,10 +185,10 @@ static PyObject * _Bas_bincoeff(PyObject *self, PyObject *args)
 static int _findspan(int n, int p, double u, double *U)
 {
   int low, high, mid;
-   
+
   // special case
   if (u == U[n+1]) return(n);
-    
+
   // do binary search
   low = p;
   high = n + 1;
@@ -151,12 +200,15 @@ static int _findspan(int n, int p, double u, double *U)
     else
       low = mid;
     mid = (low + high) / 2;
-  }  
+  }
 
   return(mid);
 }
 
-// Basis Function. 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// Basis Function.
 //
 // INPUT:
 //
@@ -179,27 +231,30 @@ static void _basisfuns(int i, double u, int p, double *U, double *N)
   // work space
   double *left  = (double*) malloc((p+1)*sizeof(double));
   double *right = (double*) malloc((p+1)*sizeof(double));
-  
+
   N[0] = 1.0;
   for (j = 1; j <= p; j++)
   {
     left[j]  = u - U[i+1-j];
     right[j] = U[i+j] - u;
     saved = 0.0;
-    
+
     for (r = 0; r < j; r++)
     {
       temp = N[r] / (right[r+1] + left[j-r]);
       N[r] = saved + right[r+1] * temp;
       saved = left[j-r] * temp;
-    } 
+    }
 
     N[j] = saved;
   }
-  
+
   free(left);
   free(right);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 static char bspeval__doc__[] =
 "Evaluation of univariate B-Spline. \n\
@@ -233,18 +288,18 @@ static void _bspeval(int d, double **ctrl, int mc, int nc, double *k, int nk, do
     // find the span of u[col]
     s = _findspan(nc-1, d, u[col], k);
     _basisfuns(s, u[col], d, k, N);
-    
+
     tmp1 = s - d;
     for (row = 0; row < mc; row++)
     {
-      tmp2 = 0.0;   
+      tmp2 = 0.0;
       for (i = 0; i <= d; i++)
 	  tmp2 += N[i] * ctrl[row][tmp1+i];
       pnt[row][col] = tmp2;
     }
   }
   free(N);
-} 
+}
 
 static PyObject * _Bas_bspeval(PyObject *self, PyObject *args)
 {
@@ -280,6 +335,9 @@ static PyObject * _Bas_bspeval(PyObject *self, PyObject *args)
 	return PyArray_Return(pnt);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 // Compute Non-zero basis functions and their derivatives.
 //
 // INPUT:
@@ -308,7 +366,7 @@ static void _dersbasisfuns(int d, double *k, int nk, double u, int s,int n, doub
   right = (double *) malloc((d+1)*sizeof(double));
 
   ndu[0][0] = 1.0;
-  
+
   for( j = 1; j <= d; j++ )
   {
     left[j] = u - k[s+1-j];
@@ -318,7 +376,7 @@ static void _dersbasisfuns(int d, double *k, int nk, double u, int s,int n, doub
     {
       ndu[r][j] = right[r+1] + left[j-r];
       temp = ndu[j-1][r]/ndu[r][j];
-      
+
       ndu[j][r] = saved + right[r+1]*temp;
       saved = left[j-r]*temp;
     }
@@ -337,43 +395,43 @@ static void _dersbasisfuns(int d, double *k, int nk, double u, int s,int n, doub
     {
       der = 0.0;
       rk = r-i;  pk = d-i;
-      
+
       if( r >= i )
       {
         a[0][s2] = a[0][s1] / ndu[rk][pk+1];
         der = a[0][s2] * ndu[pk][rk];
-      }  
+      }
       if( rk >= -1 )
         j1 = 1;
       else
-        j1 = -rk;  
+        j1 = -rk;
       if( r-1 <= pk )
         j2 = i-1;
       else
-        j2 = der-r;  
+        j2 = der-r;
 
       for( j = j1; j <= j2; j++ )
       {
         a[j][s2] = (a[j][s1] - a[j-1][s1]) / ndu[rk+j][pk+1];
         der += a[j][s2] * ndu[pk][rk+j];
-      }  
+      }
       if( r <= pk )
       {
         a[i][s2] = -a[i-1][s1] / ndu[r][pk+1];
         der += a[i][s2] * ndu[pk][r];
-      }  
+      }
       ders[r][i] = der;
       j = s1; s1 = s2; s2 = j;
-    }        
+    }
   }
-  
+
   r = d;
   for( i = 1; i <= n; i++ )
   {
     for( j = 0; j <= d; j++ )
       ders[j][i] *= r;
     r *= d-i;
-  }    
+  }
 
   freematrix(ndu);
   freematrix(a);
@@ -399,12 +457,12 @@ OUTPUT:\n\
 Modified version of Algorithm A3.2 from 'The NURBS BOOK' pg93.\n\
 \n";
 
-static void _bspdeval(int d, double **c, int mc, int nc, double *k, int nk, 
+static void _bspdeval(int d, double **c, int mc, int nc, double *k, int nk,
              double u, int n, double **p)
 {
   int i, l, j, s;
   int du = min(d,n);
-  double **dN;   
+  double **dN;
 
   dN = matrix(d+1, n+1);
 
@@ -424,7 +482,7 @@ static void _bspdeval(int d, double **c, int mc, int nc, double *k, int nk,
         p[l][i] += dN[l][j] * c[s-d+j][i];
     }
   }
-  freematrix(dN); 
+  freematrix(dN);
 }
 
 static PyObject * _Bas_bspdeval(PyObject *self, PyObject *args)
@@ -456,6 +514,9 @@ static PyObject * _Bas_bspdeval(PyObject *self, PyObject *args)
 	return PyArray_Return(pnt);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 static char bspkntins__doc__[] =
 "Insert Knot into a B-Spline.\n\
 \n\
@@ -474,7 +535,7 @@ OUTPUT:\n\
 Modified version of Algorithm A5.4 from 'The NURBS BOOK' pg164.\n\
 \n";
 
-static void _bspkntins(int d, double **ctrl, int mc, int nc, double *k, int nk, 
+static void _bspkntins(int d, double **ctrl, int mc, int nc, double *k, int nk,
               double *u, int nu, double **ictrl, double *ik)
 {
   int a, b, r, l, i, j, m, n, s, q, ind;
@@ -567,6 +628,9 @@ static PyObject * _Bas_bspkntins(PyObject *self, PyObject *args)
 	return Py_BuildValue("(OO)", (PyObject *)ic, (PyObject *)ik);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 static char bspdegelev__doc__[] =
 "Degree elevate a B-Spline t times.\n\
 \n\
@@ -581,13 +645,13 @@ OUTPUT:\n\
 Modified version of Algorithm A5.9 from 'The NURBS BOOK' pg206.\n\
 \n";
 
-static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk, 
+static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
                int t, int *nh, double **ictrl, double *ik)
 {
   int i, j, q, s, m, ph, ph2, mpi, mh, r, a, b, cind, oldr, mul;
   int n, lbz, rbz, save, tr, kj, first, kind, last, bet, ii;
   double inv, ua, ub, numer, den, alf, gam;
-  double **bezalfs, **bpts, **ebpts, **Nextbpts, *alfs; 
+  double **bezalfs, **bpts, **ebpts, **Nextbpts, *alfs;
 
   n = nc - 1;
 
@@ -601,24 +665,24 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
   ph = d + t;
   ph2 = ph / 2;
 
-  // compute bezier degree elevation coefficeients  
+  // compute bezier degree elevation coefficeients
   bezalfs[0][0] = bezalfs[d][ph] = 1.0;
 
   for (i = 1; i <= ph2; i++)
   {
     inv = 1.0 / _bincoeff(ph,i);
     mpi = min(d,i);
-    
+
     for (j = max(0,i-t); j <= mpi; j++)
       bezalfs[j][i] = inv * _bincoeff(d,j) * _bincoeff(t,i-j);
-  }    
-  
+  }
+
   for (i = ph2+1; i <= ph-1; i++)
   {
     mpi = min(d, i);
     for (j = max(0,i-t); j <= mpi; j++)
       bezalfs[j][i] = bezalfs[d-j][ph-i];
-  }       
+  }
 
   mh = ph;
   kind = ph+1;
@@ -629,14 +693,14 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
   ua = k[0];
   for (ii = 0; ii < mc; ii++)
     ictrl[ii][0] = ctrl[ii][0];
-  
+
   for (i = 0; i <= ph; i++)
     ik[i] = ua;
-    
+
   // initialise first bezier seg
   for (i = 0; i <= d; i++)
     for (ii = 0; ii < mc; ii++)
-      bpts[ii][i] = ctrl[ii][i];  
+      bpts[ii][i] = ctrl[ii][i];
 
   // big loop thru knot vector
   while (b < m)
@@ -650,7 +714,7 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
     ub = k[b];
     oldr = r;
     r = d - mul;
-    
+
     // insert knot u(b) r times
     if (oldr > 0)
       lbz = (oldr+2) / 2;
@@ -660,7 +724,7 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
     if (r > 0)
       rbz = ph - (r+1)/2;
     else
-      rbz = ph;  
+      rbz = ph;
 
     if (r > 0)
     {
@@ -668,10 +732,10 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
       numer = ub - ua;
       for (q = d; q > mul; q--)
         alfs[q-mul-1] = numer / (k[a+q]-ua);
-      for (j = 1; j <= r; j++)  
+      for (j = 1; j <= r; j++)
       {
         save = r - j;
-        s = mul + j;            
+        s = mul + j;
 
         for (q = d; q >= s; q--)
           for (ii = 0; ii < mc; ii++)
@@ -679,7 +743,7 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
 
         for (ii = 0; ii < mc; ii++)
           Nextbpts[ii][save] = bpts[ii][d];
-      }  
+      }
     }
     // end of insert knot
 
@@ -702,10 +766,10 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
       last = kind;
       den = ub - ua;
       bet = (ub-ik[kind-1]) / den;
-      
+
       // knot removal loop
       for (tr = 1; tr < oldr; tr++)
-      {        
+      {
         i = first;
         j = last;
         kj = j - kind + 1;
@@ -718,11 +782,11 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
             alf = (ub-ik[i])/(ua-ik[i]);
             for (ii = 0; ii < mc; ii++)
               ictrl[ii][i] = alf * ictrl[ii][i] + (1.0-alf) * ictrl[ii][i-1];
-          }        
+          }
           if (j >= lbz)
           {
             if (j-tr <= kind-ph+oldr)
-            {  
+            {
               gam = (ub-ik[j-tr]) / den;
               for (ii = 0; ii < mc; ii++)
                 ebpts[ii][kj] = gam*ebpts[ii][kj] + (1.0-gam)*ebpts[ii][kj+1];
@@ -736,14 +800,14 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
           i++;
           j--;
           kj--;
-        }      
-        
+        }
+
         first--;
         last++;
-      }                    
+      }
     }
     // end of removing knot n=k[a]
-                  
+
     // load the knot ua
     if (a != d)
       for (i = 0; i < ph-oldr; i++)
@@ -759,7 +823,7 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
         ictrl[ii][cind] = ebpts[ii][j];
       cind++;
     }
-    
+
     if (b < m)
     {
       // setup for next pass thru loop
@@ -777,9 +841,9 @@ static void _bspdegelev(int d, double **ctrl, int mc, int nc, double *k, int nk,
       // end knot
       for (i = 0; i <= ph; i++)
         ik[kind+i] = ub;
-  }                  
-  // end while loop   
-  
+  }
+  // end while loop
+
   *nh = mh - ph - 1;
 
   freematrix(bezalfs);
@@ -821,6 +885,8 @@ static PyObject * _Bas_bspdegelev(PyObject *self, PyObject *args)
 	return Py_BuildValue("(OOi)", (PyObject *)ic, (PyObject *)ik, nh);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 static char bspbezdecom__doc__[] =
 "Decompose a B-Spline to Bezier segments.\n\
 \n\
@@ -835,12 +901,12 @@ OUTPUT:\n\
 Modified version of Algorithm A5.6 from 'The NURBS BOOK' pg173.\n\
 \n";
 
-static void _bspbezdecom(int d, double **ctrl, int mc, int nc, double *k, int nk, 
+static void _bspbezdecom(int d, double **ctrl, int mc, int nc, double *k, int nk,
                double **ictrl)
 {
   int i, j, s, m, r, a, b, mul, n, nb, ii, save, q;
   double ua, ub, numer;
-  double *alfs; 
+  double *alfs;
 
   n = nc - 1;
 
@@ -851,11 +917,11 @@ static void _bspbezdecom(int d, double **ctrl, int mc, int nc, double *k, int nk
   b = d+1;
   ua = k[0];
   nb = 0;
-  
+
   // initialise first bezier seg
   for (i = 0; i <= d; i++)
     for (ii = 0; ii < mc; ii++)
-      ictrl[ii][i] = ctrl[ii][i];  
+      ictrl[ii][i] = ctrl[ii][i];
 
   // big loop thru knot vector
   while (b < m)
@@ -867,7 +933,7 @@ static void _bspbezdecom(int d, double **ctrl, int mc, int nc, double *k, int nk
     mul = b - i + 1;
     ub = k[b];
     r = d - mul;
-    
+
     // insert knot u(b) r times
     if (r > 0)
     {
@@ -875,18 +941,18 @@ static void _bspbezdecom(int d, double **ctrl, int mc, int nc, double *k, int nk
       numer = ub - ua;
       for (q = d; q > mul; q--)
         alfs[q-mul-1] = numer / (k[a+q]-ua);
-      for (j = 1; j <= r; j++)  
+      for (j = 1; j <= r; j++)
       {
         save = r - j;
-        s = mul + j;            
+        s = mul + j;
 
         for (q = d; q >= s; q--)
           for (ii = 0; ii < mc; ii++)
             ictrl[ii][q+nb] = alfs[q-s]*ictrl[ii][q+nb]+(1.0-alfs[q-s])*ictrl[ii][q-1+nb];
 
         for (ii = 0; ii < mc; ii++)
-          ictrl[ii][save+nb+d+1] = ictrl[ii][d]; 
-      }  
+          ictrl[ii][save+nb+d+1] = ictrl[ii][d];
+      }
     }
     // end of insert knot
     nb += d;
@@ -900,9 +966,9 @@ static void _bspbezdecom(int d, double **ctrl, int mc, int nc, double *k, int nk
       b++;
       ua = ub;
     }
-  }                 
-  // end while loop   
-  
+  }
+  // end while loop
+
   free(alfs);
 }
 
@@ -923,7 +989,7 @@ static PyObject * _Bas_bspbezdecom(PyObject *self, PyObject *args)
 	mc = ctrl->dimensions[0];
 	nc = ctrl->dimensions[1];
 	nk = k->dimensions[0];
-	
+
 	i = d + 1;
 	c = 0;
 	m = nk - d - 1;
@@ -935,8 +1001,8 @@ static PyObject * _Bas_bspbezdecom(PyObject *self, PyObject *args)
 			b++;
 			i++;
 		}
-		if(b < d) 
-			c = c + (d - b); 
+		if(b < d)
+			c = c + (d - b);
 		i++;
 	}
 	dim[0] = mc;
@@ -946,11 +1012,221 @@ static PyObject * _Bas_bspbezdecom(PyObject *self, PyObject *args)
 	icmat = vec2mat(ic->data, mc, nc+c);
 	_bspbezdecom(d, ctrlmat, mc, nc, (double *)k->data, nk, icmat);
 	free(icmat);
-	free(ctrlmat); 
+	free(ctrlmat);
 	Py_DECREF(ctrl);
-	Py_DECREF(k); 
+	Py_DECREF(k);
 	return Py_BuildValue("O", ic);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+static char bspdeboor__doc__[] =
+"Evaluation of univariate B-Spline using the De Boor algorithm. \n\
+\n\
+INPUT:\n\
+\n\
+ d - spline degree       integer\n\
+ c - control points      double  matrix(mc,nc)\n\
+ k - knot sequence       double  vector(nk)\n\
+ u - parametric points   double  vector(nu)\n\
+\n\
+OUTPUT:\n\
+\n\
+   p - evaluated points    double  matrix(mc,nu)\n\
+\n\
+Algorithm version from http://www.cs.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/B-spline/de-Boor.html\n\
+\n";
+
+//------------------------------------------------------------------------------
+// Find the right intervall
+//------------------------------------------------------------------------------
+// - u  : curve parameter
+// - nk : number of knot values
+// - *k : knot vector
+//------------------------------------------------------------------------------
+static int _findinterval(double u, int nk, double *k){
+    int j;
+//..Guess the first position
+    j = nk*(u-k[0])/(k[nk-1]-k[0]);
+//..if u[j]>u -> go backwards...................................................
+    if(k[j]>u){
+        for(j=j-1; j>=0; j--){
+            if(u>=k[j] && u<k[j+1]){
+                return j;
+            }
+        }
+        return -1;
+    }
+//..else if u[j]<= u -> go forward...................................................
+    for(j=j; j<nk-1; j++){
+        if(u>=k[j] && u<k[j+1]){
+            return j;
+        }
+    }
+//..if u is equal to last knot vector
+    if(u==k[nk-1])
+        return nk-1;
+//..u is outside U vector.......................................................
+    return -1;
+}
+
+/*
+static int _findinterval(double u, int nk, double *k){
+    int j;
+//..Walking through the U vector................................................
+    for(j=0; j<nk-1; j++){
+        if(u>=k[j] && u<k[j+1]){
+            return j;
+        }
+    }
+//..if u is equal to last knot vector
+    if(u==k[nk-1])
+        return nk-1;
+//..u is outside U vector.......................................................
+    return -1;
+}
+*/
+
+//------------------------------------------------------------------------------
+// Check hom much a knot value is presented inside the knot vector
+//------------------------------------------------------------------------------
+// - u  : knot value
+// - nk : number of knot values inside the knot vector
+// - *k : knot vector
+//------------------------------------------------------------------------------
+static int _multiplicity(double u, int ik, int nk, double *k){
+    int i, s;
+    s = 0;
+    for(i=ik; i>=0; i--){
+        //printf("k[%i]=%f | u=%f\n", i, k[i], u);
+        if(u != k[i])
+            break;
+        s++;
+    }
+    return s;
+}
+
+//------------------------------------------------------------------------------
+// Evaluate a point on a curve using De Boor algorithm
+//------------------------------------------------------------------------------
+//       d : Degree of the curve
+//  **ctrl : Control point matrix
+//      mc : Dimension of the control points
+//      nc : Number of control points
+//      *k : Knot vector
+//      nk : Number of knot vector values (lenght of vector)
+//      *u : Array with all parameters u to evaluate
+//      nu : Number of u parameters (lenght of vector)
+//   **pnt : Matrix with point coordinates on curves according to *u
+//------------------------------------------------------------------------------
+static void _bspdeboor(int d, double **ctrl, int mc, int nc, double *k, int nk,
+                       double *u, int nu, double **pnt){
+//..Initalize values............................................................
+    int    col, j, s, Iter, i, row, NumIter;
+    double ui, alpha, tmp;
+    double **cpctrl;
+
+//..Evaluate points on curves for every parameter u.............................
+    for (col=0 ; col<nu ; col++)
+    {
+        ui = u[col];
+        j = _findinterval(ui, nk, k); //................ Get left defined span of ui
+        s =  _multiplicity(ui, j, nk, k); //............ Check multiplicity
+    //..Copy control point matrix to a temprary matrix..........................
+        //cpctrl = cpymat(ctrl, mc, nc);
+        cpctrl = matrix(mc, nc);
+
+    //..Start recrusive iteration...............................................
+        for(Iter=1 ; Iter<=(d-s); Iter++){
+            for(i=(j-s) ; i>=(j-d+Iter) ; i--){
+                alpha = (ui-k[i])/(k[i+d-Iter+1]-k[i]);
+                for (row = 0; row < mc; row++){
+                    if(Iter<2)
+                        cpctrl[row][i] = (1-alpha) * ctrl[row][i-1]
+                                       +    alpha  * ctrl[row][i];
+                    else
+                        cpctrl[row][i] = (1-alpha) * cpctrl[row][i-1]
+                                       +    alpha  * cpctrl[row][i];
+                }
+            }
+        }
+
+    //..Copy point at (j-s) to pnt
+        for(row = 0 ; row < mc; row++){
+            if(j>=s){
+                if(Iter < 2)
+                    pnt[row][col] = ctrl[row][j-s];
+                else
+                    pnt[row][col] = cpctrl[row][j-s];
+            }
+            else{
+                if(Iter < 2)
+                    pnt[row][col] = ctrl[row][0];
+                else
+                    pnt[row][col] = cpctrl[row][0];
+            }
+        }
+    }
+    return;
+}
+
+static PyObject * _Bas_bspdeboor(PyObject *self, PyObject *args){
+//..Initalize C veariables......................................................
+    int d;  //............................... Degree of the spline
+    int mc; //............................... Dimension of control points
+    int nc; //............................... ??
+    int nu; //............................... Number of parameters u to evaluate
+    int dim[2]; //........................... ??
+    double **ctrlmat; //..................... Control point matrix
+    double **pntmat; //...................... Matrix of evaluated points
+
+//..Initalize python variables..................................................
+    PyObject *input_ctrl; //................. Python: Length of control points
+    PyObject *input_k; //.................... Python: Length of knot vector
+    PyObject *input_u; //.................... Python: Length of u vector
+    PyArrayObject *ctrl; //.................. Python: Control point matrix
+    PyArrayObject *k; //..................... Python: Knot vector
+    PyArrayObject *u; //..................... Python: u vector
+    PyArrayObject *pnt; //................... Python: Return matrix of evaluated points
+
+//..Pharse input arguments from python..........................................
+    if(!PyArg_ParseTuple(args, "iOOO", &d, &input_ctrl, &input_k, &input_u))
+        return NULL;
+//..Get control point matrix from python........................................
+    ctrl = (PyArrayObject *) PyArray_ContiguousFromObject(input_ctrl, PyArray_DOUBLE, 2, 2);
+    if(ctrl == NULL)
+        return NULL;
+//..Get knot vector.............................................................
+    k = (PyArrayObject *) PyArray_ContiguousFromObject(input_k, PyArray_DOUBLE, 1, 1);
+    if(k == NULL)
+        return NULL;
+//..Get u parameter vector......................................................
+    u = (PyArrayObject *) PyArray_ContiguousFromObject(input_u, PyArray_DOUBLE, 1, 1);
+    if(u == NULL)
+        return NULL;
+//..Save values in variables....................................................
+    mc = ctrl->dimensions[0];
+    nc = ctrl->dimensions[1];
+    nu = u->dimensions[0];
+    dim[0] = mc;
+    dim[1] = nu;
+    pnt = (PyArrayObject *) PyArray_FromDims(2, dim, PyArray_DOUBLE);
+    ctrlmat = vec2mat(ctrl->data, mc, nc);
+    pntmat = vec2mat(pnt->data, mc, nu);
+//..Evaluate B-spline points....................................................
+    _bspdeboor(d, ctrlmat, mc, nc, (double *)k->data, k->dimensions[0], (double *)u->data, nu, pntmat);
+//..Destroy variables...........................................................
+    free(pntmat);
+    free(ctrlmat);
+//..Decrement the reference count for object....................................
+    Py_DECREF(ctrl);
+    Py_DECREF(k);
+    Py_DECREF(u);
+//..Return evaluated points.....................................................
+    return PyArray_Return(pnt);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 static PyMethodDef _Bas_methods[] =
 {
@@ -960,6 +1236,7 @@ static PyMethodDef _Bas_methods[] =
 	{"bspkntins", _Bas_bspkntins, METH_VARARGS, bspkntins__doc__},
 	{"bspdegelev", _Bas_bspdegelev, METH_VARARGS, bspdegelev__doc__},
 	{"bspbezdecom", _Bas_bspbezdecom, METH_VARARGS, bspbezdecom__doc__},
+    {"bspdeboor", _Bas_bspdeboor, METH_VARARGS, bspdeboor__doc__},
 	{NULL, NULL}
 };
 
@@ -969,4 +1246,3 @@ void init_Bas()
 	m = Py_InitModule3("_Bas", _Bas_methods, _Bas_module__doc__);
 	import_array();
 }
-	
