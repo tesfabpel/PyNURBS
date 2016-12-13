@@ -1,3 +1,8 @@
+# @Date:   2016-12-08T20:59:59+00:00
+# @Last modified time: 2016-12-13T00:44:47+00:00
+
+
+
 __doc__ = '''NURBS - Non Uniform Rational B-Splines.
 This python module is a port of Mark Spink's SCILAB/MATLAB tolbox to python with help of numpy.
 Information about Mark Spink's tolbox and more background NURBS information can be found at:
@@ -7,7 +12,6 @@ Dependency
 ============
 Python 2.0 or newer
 Numerical Python
-Dislin -> optional but recomended
 PyOpenGL -> optional
 
 Installation

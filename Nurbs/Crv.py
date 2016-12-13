@@ -1,9 +1,5 @@
-# @Author: Daniel Kharlamov <damov>
-# @Date:   2016-10-27T20:13:51+01:00
-# @Email:  d.kharlamov@soton.ac.uk
-# @Last modified by:   damov
-# @Last modified time: 2016-12-08T01:26:05+00:00
-# @License: GPL 3.0
+# @Date:   2016-12-08T20:59:59+00:00
+# @Last modified time: 2016-12-13T00:43:45+00:00
 
 
 
@@ -141,58 +137,7 @@ class Crv:
 
 
     def plot(self, n = 25):
-        """A simple plotting function for debugging purpose
-	n = number of subdivisions.
-	Depends on the dislin plotting library."""
-        try:
-            import dislin
-        except ImportError, value:
-            print 'dislin plotting library not available'
-            return
-
-        pnts = self.pnt3D(np.arange(n + 1, typecode = np.float)/n)
-        knots = self.pnt3D(self.uknots)
-
-        maxminx = np.sort(self.cntrl[0,:]/self.cntrl[3,:])
-        minx = maxminx[0]
-        maxx = maxminx[-1]
-        if minx == maxx:
-            minx -= 1.
-            maxx += 1.
-        maxminy = np.sort(self.cntrl[1,:]/self.cntrl[3,:])
-        miny = maxminy[0]
-        maxy = maxminy[-1]
-        if miny == maxy:
-            miny -= 1.
-            maxy += 1.
-        maxminz = np.sort(self.cntrl[2,:]/self.cntrl[3,:])
-        minz = maxminz[0]
-        maxz = maxminz[-1]
-        if minz == maxz:
-            minz -= 1.
-            maxz += 1.
-
-        dislin.metafl('cons')
-        dislin.disini()
-        dislin.hwfont()
-        dislin.pagera()
-        dislin.name('X-axis', 'X')
-        dislin.name('Y-axis', 'Y')
-        dislin.name('Z-axis', 'Z')
-        dislin.graf3d(minx, maxx, 0 , abs((maxx-minx)/4.),
-                      miny, maxy, 0 , abs((maxy-miny)/4.),
-                      minz, maxz, 0 , abs((maxz-minz)/4.))
-        dislin.color('yellow')
-        dislin.curv3d(pnts[0,:], pnts[1,:], pnts[2,:], n+1)
-        dislin.color('red')
-        dislin.dashm()
-        dislin.curv3d(self.cntrl[0,:]/self.cntrl[3,:], self.cntrl[1,:]/self.cntrl[3,:],
-                      self.cntrl[2,:]/self.cntrl[3,:], self.cntrl.shape[1])
-        dislin.color('white')
-        dislin.incmrk(-1)
-        dislin.marker(8)
-        dislin.curv3d(knots[0,:], knots[1,:], knots[2,:], knots.shape[1])
-        dislin.disfin()
+        raise NotImplementedError
 
     def __call__(self, *args):
         return self.pnt3D(args[0])

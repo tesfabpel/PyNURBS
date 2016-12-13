@@ -7,7 +7,6 @@ is a port of Mark Spink's SCILAB/MATLAB tolbox to python with help of numpy.
 ============
 Python 2.0 or above
 NumPy
-Dislin -> optional but recomended
 PyOpenGL -> optional
 
 #### Installation

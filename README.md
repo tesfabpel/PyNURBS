@@ -1,6 +1,6 @@
 <!--
 @Date:   2016-12-08T20:59:59+00:00
-@Last modified time: 2016-12-08T21:07:07+00:00
+@Last modified time: 2016-12-13T00:45:09+00:00
 -->
 
 
@@ -13,7 +13,6 @@ is a port of Mark Spink's SCILAB/MATLAB tolbox to python with help of numpy.
 #### Dependency
 Python 2.0 or above  
 NumPy  
-Dislin -> optional but recomended  
 PyOpenGL -> optional  
 
 #### Installation
