@@ -81,7 +81,7 @@ class Crv:
 	NOTE: No knot multiplicity will be increased beyond the order of the spline"""
         if len(uknots):
             uknots = np.sort(np.asarray(uknots, np.float))
-            if np.less(uknots, 0.) or np.greater(uknots, 1.):
+            if np.any(np.less(uknots, 0.)) or np.any(np.greater(uknots, 1.)):
                 raise NURBSError, 'NURBS curve parameter out of range [0,1]'
             self.cntrl, self.uknots = bspkntins(self.degree, self.cntrl, self.uknots, uknots)
 
@@ -122,7 +122,7 @@ class Crv:
     def pnt4D(self, ut):
         "Evaluate parametric point[s] and return 4D homogeneous coordinates"
         ut = np.asarray(ut, np.float)
-        if np.less(ut, 0.) or np.greater(ut, 1.):
+        if np.any(np.less(ut, 0.)) or np.any(np.greater(ut, 1.)):
             raise NURBSError, 'NURBS curve parameter out of range [0,1]'
         return bspeval(self.degree, self.cntrl, self.uknots, ut)
 
@@ -130,7 +130,7 @@ class Crv:
         "Evaluate parametric point[s] and return 4D homogeneous coordinates"
         "using De Bloor algorithm for B-Splines                            "
         ut = np.asarray(ut, np.float)
-        #if np.less(ut, 0.) or np.greater(ut, 1.):
+        #if np.any(np.less(ut, 0.)) or np.any(np.greater(ut, 1.)):
         if True in [ui<0. or ui>1.0 for ui in ut]:
             raise NURBSError, 'NURBS curve parameter out of range [0,1]'#
         return bspdeboor(self.degree, self.cntrl, self.uknots, ut)
