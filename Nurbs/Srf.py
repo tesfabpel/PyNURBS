@@ -464,6 +464,7 @@ class Coons(Srf):
         r2 = Ruled(v1, v2)
         r2.swapuv()
         t = Bilinear(u1.cntrl[:,0], u1.cntrl[:,-1], u2.cntrl[:,0], u2.cntrl[:,-1])
+        t.swapuv()
         # Raise all surfaces to a common degree
         du = max(r1.degree[0], r2.degree[0], t.degree[0])
         dv = max(r1.degree[1], r2.degree[1], t.degree[1])
